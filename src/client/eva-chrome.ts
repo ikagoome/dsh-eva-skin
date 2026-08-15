@@ -1,32 +1,27 @@
 /**
- * EVA chrome decoration builder: the fixed click-through layer with the
- * Asuka nameplate (top-left), NERV nameplate (top-right), hazard stripes,
- * corner brackets, and status line. Pure static markup (no user data),
- * mounted by the plugin's apply and removed by its effect disposer; styles
- * live in eva.css.ts under the `#dsh-eva-chrome` id.
+ * EVA chrome decoration builders: the fixed click-through layer (hazard
+ * stripes, corner brackets, status line) plus the two nameplate elements the
+ * plugin anchors onto the sidebar's settings and New Session frames. Pure
+ * static markup (no user data), mounted by the plugin's apply and removed by
+ * its effect disposers; styles live in eva.css.ts under the `#dsh-eva-chrome`
+ * id and the `.eva-*` classes.
  */
 
-/** Compact NERV leaf for the NERV nameplate. */
-const MINI_LEAF_SVG = `
-<svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
-  <path d="M8 1 C4.6 3.6 2.2 6.8 2.2 10 C2.2 13 4.8 14.8 8 14.6 C11.2 14.8 13.8 13 13.8 10 C13.8 6.8 11.4 3.6 8 1 Z" fill="#ffb300" stroke="#101010" stroke-width="0.9"/>
-  <path d="M8 3.5 L8 12" stroke="#101010" stroke-width="0.9"/>
-</svg>`
-
-/** The Asuka nameplate markup (EVA-02 number plate + pilot name), top-left. */
+/** The Asuka tag content (compact single line: hangs above the frame corner
+    without covering the button's own label). */
 const ASUKA_NAME = `
-<div class="eva-asuka">
-  <span class="unit-num">02</span>
-  <span class="name">
-    <span class="who">ASUKA</span>
-    <span class="role">SECOND CHILD</span>
-  </span>
-</div>`
+  <span class="eva-tag-num">02</span>
+  <span class="eva-tag-name">ASUKA</span>`
+
+/** The NERV / UNIT-02 tag content (compact single line, same constraint). */
+const NERV_NAME = `
+  <span class="eva-tag-name">NERV</span>
+  <span class="eva-tag-unit">UNIT-02</span>`
 
 /**
- * Build the chrome decoration layer. Appending it is the caller's job; the
- * element carries no interactive content and is inert to pointer events via
- * the stylesheet.
+ * Build the chrome decoration layer (no nameplates — those anchor to the
+ * sidebar frames). Appending it is the caller's job; the element carries no
+ * interactive content and is inert to pointer events via the stylesheet.
  * @returns the ready-to-mount decoration container.
  */
 export function buildEvaChrome(): HTMLDivElement {
@@ -40,13 +35,34 @@ export function buildEvaChrome(): HTMLDivElement {
     <span class="eva-corner tr"></span>
     <span class="eva-corner bl"></span>
     <span class="eva-corner br"></span>
-    ${ASUKA_NAME}
-    <div class="eva-nameplate">
-      ${MINI_LEAF_SVG}
-      <span>NERV</span>
-      <span class="eva-unit">UNIT-02</span>
-    </div>
     <div class="eva-status">EVA-02 // SYSTEM ONLINE</div>
   `
   return root
+}
+
+/**
+ * Build the Asuka tag element, anchored by apply() onto the New Session
+ * frame's top-left corner (hung above the button, clear of its label).
+ * @returns the tag element (positioned by the anchored-plate CSS).
+ */
+export function createAsukaPlate(): HTMLDivElement {
+  const plate = document.createElement('div')
+  plate.className = 'eva-asuka'
+  plate.dataset.evaAnchor = 'new-session'
+  plate.innerHTML = ASUKA_NAME
+  return plate
+}
+
+/**
+ * Build the NERV / UNIT-02 tag element, anchored by apply() onto the
+ * settings frame's top-left corner (hung above the button, clear of its
+ * label).
+ * @returns the tag element (positioned by the anchored-plate CSS).
+ */
+export function createNervPlate(): HTMLDivElement {
+  const plate = document.createElement('div')
+  plate.className = 'eva-nameplate'
+  plate.dataset.evaAnchor = 'settings'
+  plate.innerHTML = NERV_NAME
+  return plate
 }

@@ -1,6 +1,6 @@
 # dsh-eva-skin
 
-DeepSeek Harness Web GUI 的 EVA 皮肤——明日香(EVA-02)红黑主题、壁纸、机械装饰与输入框特效。
+DeepSeek Harness Web GUI 的 EVA 皮肤——明日香(EVA-02)红黑主题、壁纸、侧栏机械装饰、输入框特效,以及 Codex 风格的产物 Diff 查看器。
 
 [English](README.md)
 
@@ -8,8 +8,9 @@ DeepSeek Harness Web GUI 的 EVA 皮肤——明日香(EVA-02)红黑主题、壁
 
 - **EVA 红黑主题** — 通过主题注册表 `overrideTokens` 叠加 token 层(以 inline 变量写入 body,优先级高于所有样式表):半透明深红表面、EVA 红 `#ff3355` 强调、暖白文字、红色边框、琥珀警示、EVA 绿成功态。插件会把配色锁定为深色模式(经典红黑,不会发粉);卸载插件即可恢复之前的主题选择。
 - **明日香壁纸** — 全视口背景图(以 data URI 内嵌进 bundle,无需静态路由)+ 两团红色光晕。
-- **机械装饰** — 点击穿透的固定装饰层(z-index 15):左上 `02 / ASUKA / SECOND CHILD` 驾驶员铭牌、右上 `NERV / UNIT-02` 铭牌、上下黄黑警示条、四角红色角标、右下 `EVA-02 // SYSTEM ONLINE` 等宽状态字。
+- **侧栏机械装饰** — 点击穿透的固定装饰层(z-index 15):上下黄黑警示条、四角红色角标、右下 `EVA-02 // SYSTEM ONLINE` 等宽状态字。侧栏「新会话」和「设置」按钮配 EVA 红框深底(内容居中),紧凑的 `02 ASUKA` / `NERV UNIT-02` 标签挂在各自按钮框左上角的正上方,不遮挡按钮文字。工作区树里的文件夹图标替换为红色 EVA 风蝴蝶(倾斜 30°);品牌字标里的 HARNESS 徽章文字也做了反色修正,保证可读。
 - **输入框特效** — 发消息的输入框:红色描边 + 聚焦红光、顶部黄黑警示条、上沿 `TRANSMIT` 铭牌。
+- **产物 Diff 查看器** — 类似 Codex:每次修改后,点击聊天末尾的产物文件芯片,右侧弹出 EVA 风格面板展示该文件的实际改动,用颜色区分(红色为删除、绿色为新增,复用共享 DiffBlock 组件),按 ✕ 或 Esc 关闭;没有 diff 数据的文件保留默认的宿主打开行为。
 
 ## 环境要求
 
@@ -47,11 +48,21 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 
 3. 构建 bundle:`pnpm --filter @deepseek-ai/dsh-client-ui-eva run bundle`(需要 harness 工具链,见下)。
 
+## 使用
+
+- **应用皮肤** — 刷新 GUI 页面(F5 / Ctrl+F5)。安装与更新都会经由运行中服务器的 patch 热挂载生效;若没变化,重启 `dsh web`。
+- **查看改动** — agent 修改或创建文件后,该轮末尾会出现产物文件芯片;点击任意一个,右侧弹出 diff 面板,红=删除、绿=新增,按 ✕ 或 Esc 关闭。
+- **其他皮肤** — 本插件激活期间按"一次一个皮肤"处理;禁用或删除 `ui-eva` 行即可恢复之前的主题偏好与其他皮肤的装饰。
+
 ## 自定义
 
 - **壁纸** — 替换 `assets/asuka.jpg`,然后 `pnpm run embed`(重新生成 `src/client/asuka.data.ts`)并重新构建。
 - **配色** — `src/client/eva-theme.ts`(DARK 与 LIGHT 两套,按 token 分组)。
-- **装饰** — 结构在 `src/client/eva-chrome.ts`;样式在 `src/client/eva.css.ts` 的 `#dsh-eva-chrome` 与输入框区块。
+- **角标标签** — 位置与大小在 `src/client/eva.css.ts`(`.eva-asuka[data-eva-anchor]`、`.eva-nameplate[data-eva-anchor]`,两者都挂在 `top:-16px; left:6px`);结构在 `src/client/eva-chrome.ts`。
+- **侧栏按钮框** — 新会话/设置按钮的红框样式在 `eva.css.ts`(`button[class*='newSession']` 与 `[data-slot='sidebar.settings'] > button` 规则)。
+- **文件夹蝴蝶** — `eva.css.ts` 里 `span[class*='folder']:has(svg)` 规则的 data URI SVG(旋转是组上的 `rotate(30)` 变换)。
+- **Diff 面板** — 组件 `src/client/eva-artifacts-panel.tsx`;样式在 `eva.css.ts` 的 `#dsh-eva-artifacts` 区块;只读的 diff 收集器在 `src/client/eva-artifacts.ts`。
+- **其他装饰** — 结构在 `src/client/eva-chrome.ts`;样式在 `src/client/eva.css.ts` 的 `#dsh-eva-chrome` 与输入框区块。
 
 ## 从源码构建
 
@@ -70,7 +81,7 @@ pnpm --filter @deepseek-ai/dsh-client-ui-eva run bundle
 ## 说明
 
 - `assets/asuka.jpg` 是《新世纪福音战士》角色明日香的同人图;发布或再分发本皮肤时请注意图片来源与版权。
-- 皮肤只影响展示:不渲染工具、不注册命令、不产生会话事件——GUI 的模型可见面不受影响。
+- 皮肤只影响展示:不渲染工具、不注册命令、不产生会话事件——GUI 的模型可见面不受影响。Diff 查看器只读取会话日志里已应用的改动。
 
 ## License
 

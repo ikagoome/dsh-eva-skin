@@ -60,6 +60,39 @@ powershell -ExecutionPolicy Bypass -File install.ps1
 - **查看改动** — agent 修改或创建文件后,该轮末尾会出现产物文件芯片;点击任意一个,右侧弹出 diff 面板,展示该文件当前的完整内容:所有行白色、只有被改动的行标红(删除)/标绿(新增),内容经 `eva-files` 配套路由读取、diff 数据取自会话;文件无法读取(已删除、二进制、过大)时回退为改动区域视图或读取失败提示。产物行放不下时出现 "+N" 余数,点击弹出该轮全部产物文件列表,再点名字打开对应文件。按 ✕、Esc 或点击面板外部任意区域关闭。
 - **其他皮肤** — 本插件激活期间按"一次一个皮肤"处理;禁用或删除 `ui-eva` 行即可恢复之前的主题偏好与其他皮肤的装饰。
 
+## 工程结构
+
+```
+dsh-eva-skin/
+├── src/                          # 皮肤包(@deepseek-ai/dsh-client-ui-eva)
+│   ├── index.ts                  #   node 半:apply 为空(loader 需要一个可解析入口
+│   │                             #     才能扫描 dsh.client 声明)
+│   ├── invariant.ts              #   harness invariant 约定(空安装器)
+│   └── client/                   #   浏览器半,打包为 lib/client.js
+│       ├── index.ts              #     入口:锁定深色、token 覆写、注入样式、
+│       │                         #     挂载装饰、锚定角标、产物面板接线
+│       ├── eva-theme.ts          #     token 覆写(红黑配色)
+│       ├── eva.css.ts            #     全部样式:壁纸、装饰、面板、输入框
+│       ├── eva-chrome.ts         #     装饰层 + 侧栏角标结构
+│       ├── asuka.data.ts         #     壁纸 data URI(scripts/embed-image.mjs 生成)
+│       ├── eva-artifacts.ts      #     diff 收集器 + 会话快照 diff 查找
+│       └── eva-artifacts-panel.tsx  # 产物面板与 "+N" 溢出列表
+├── files/                        # 服务端配套(@deepseek-ai/dsh-eva-files,仅 node)
+│   ├── src/index.ts              #   /eva-files/content 回环路由(从磁盘读文件文本)
+│   └── lib/index.js              #   配套插件构建产物
+├── lib/                          # 已入库的构建产物——使用皮肤无需构建
+│   ├── client.js (+ .map)        #   浏览器 bundle
+│   ├── index.js                  #   node 半
+│   └── invariant.js              #   invariant 配套
+├── assets/
+│   ├── asuka.jpg                 #   壁纸源图(同人图)
+│   └── preview.png               #   README 预览截图
+├── scripts/embed-image.mjs       # 壁纸 → data URI 嵌入脚本(`pnpm run embed`)
+├── install.ps1 / install.sh      # 两个包的链接 + patch 行安装脚本
+├── tsdown.config.ts              # 构建配置(harness 的 tsdown.client.ts 预设)
+└── tsconfig.json
+```
+
 ## 自定义
 
 - **壁纸** — 替换 `assets/asuka.jpg`,然后 `pnpm run embed`(重新生成 `src/client/asuka.data.ts`)并重新构建。
@@ -76,9 +109,10 @@ bundle 使用 harness 的共享 `tsdown.client.ts` 预设构建,因此独立仓�
 
 ```sh
 pnpm install
-pnpm exec tsc -b packages/client/ui-eva/tsconfig.json
 pnpm --filter @deepseek-ai/dsh-client-ui-eva run bundle
 ```
+
+node 半(`lib/index.js`、`lib/invariant.js`)与浏览器 bundle(`lib/client.js`)都直接从 `src/` 编译,无需单独的 `tsc` 步骤。`files/` 配套插件用同样的方式从自己的目录构建(普通 `tsdown` 配置)。
 
 ## 卸载
 

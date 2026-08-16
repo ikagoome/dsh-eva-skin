@@ -235,30 +235,5 @@ export function apply(ctx: ClientContext): void {
   }, 'ui-eva: artifact diff panel')
 
   // Debug aid: expose the panel surface for console probing (window.__evaDebug).
-  Object.assign(window, {
-    __evaDebug: {
-      openArtifactsPanel, closeArtifactsPanel, diffFor, latestDiffs,
-      sessionsState: (): unknown => {
-        try {
-          return { has: !!ctx.sessions, list: !!(ctx.sessions && ctx.sessions.list) }
-        } catch (error) {
-          return { threw: String(error) }
-        }
-      },
-      probeFetch: async (path: string): Promise<unknown> => {
-        try {
-          const state = ctx.sessions.list.getSnapshot()
-          const current = state.current
-          const cwd = current === undefined ? undefined : state.byId[current]?.cwd
-          const query = new URLSearchParams({ path })
-          if (cwd !== undefined) query.set('cwd', cwd)
-          const url = `/eva-files/content?${query.toString()}`
-          const res = await fetch(url, { cache: 'no-store' })
-          return { status: res.status, url, current }
-        } catch (error) {
-          return { threw: String(error) }
-        }
-      },
-    },
-  })
+  Object.assign(window, { __evaDebug: { openArtifactsPanel, closeArtifactsPanel, diffFor, latestDiffs } })
 }

@@ -174,6 +174,14 @@ button[class*='brand'] [clip-path*='badge-clip'] path {
   background: rgba(10, 4, 7, 0.32);
 }
 
+/* Pinned plate: the backdrop stops dimming and stops intercepting events, so
+   the main window keeps its brightness and the chat stays fully operable
+   while the plate floats on the right. */
+#dsh-eva-artifacts-backdrop[data-pinned] {
+  background: transparent;
+  pointer-events: none;
+}
+
 /* Open-panel layout squeeze: the center column gives up the plate's lane
    (440px panel + 14px right margin; narrower viewports shrink with the plate)
    with a short ease so opening and closing glide instead of snapping. */

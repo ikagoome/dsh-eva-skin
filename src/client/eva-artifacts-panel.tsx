@@ -293,6 +293,7 @@ export function EvaArtifactsPanel({ path, diffs, onClose, loadContent }: EvaArti
     <>
       <div
         id="dsh-eva-artifacts-backdrop"
+        data-pinned={pinned || undefined}
         onClick={pinned ? undefined : onClose}
         aria-hidden="true"
       />
@@ -397,6 +398,7 @@ export function EvaArtifactsList({ paths, onClose, onPick }: EvaArtifactsListPro
     <>
       <div
         id="dsh-eva-artifacts-backdrop"
+        data-pinned={pinned || undefined}
         onClick={pinned ? undefined : onClose}
         aria-hidden="true"
       />

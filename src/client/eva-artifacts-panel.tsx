@@ -140,7 +140,9 @@ function findRun(haystack: readonly string[], needle: readonly string[], from: n
  * @returns the marked lines and removal blocks.
  */
 function markFullContent(content: string, diffs: readonly DiffHunk[]): MarkedContent {
-  const fileLines = content.split('\n')
+  // The tool diffs are LF-normalized; normalize the file text the same way so
+  // CRLF files (the Windows norm) still align with their hunks.
+  const fileLines = content.replace(/\r\n/g, '\n').split('\n')
   const lines: MarkedLine[] = fileLines.map((text) => ({ kind: 'ctx', text }))
   const removals: { at: number; lines: string[] }[] = []
   let cursor = 0

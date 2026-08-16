@@ -14,7 +14,7 @@ Evangelion skin for the [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 - **Asuka wallpaper** — the full-viewport background image (data-URI embedded in the bundle, no static route needed) with two red glow gradients.
 - **Sidebar chrome** — click-through fixed layer (z-index 15): yellow-black hazard stripes top and bottom, red corner brackets, and an `EVA-02 // SYSTEM ONLINE` monospace status line. The sidebar's New Session and settings buttons get EVA plates (red-bordered, translucent dark, content centered) with compact `02 ASUKA` / `NERV UNIT-02` tags hanging just above their top-left corners, clear of the buttons' own labels. The workspace tree's folder glyphs become a red EVA-style butterfly (rotated 30°), and the HARNESS badge in the brand wordmark is knocked out in the plate ink so it stays legible.
 - **Composer treatment** — the message input capsule gets a red-tinted stroke with a red glow on focus, a yellow-black hazard strip in its top padding band, and a `TRANSMIT` tag on its outer top edge.
-- **Artifact diff viewer** — Codex-style: after each modification, click a produced-file chip (the file list at the end of a turn) to open a right-side EVA panel showing that file's applied diff, removed lines in red and added lines in green (the shared DiffBlock). Close it with ✕ or Esc. A file the skin has no diff for keeps the default host opener.
+- **Artifact diff viewer** — Codex-style: after each modification, click a produced-file chip (the file list at the end of a turn) to open a right-side EVA panel showing that file's change as full content — every known line renders in white monospace, only the removed lines tint red and the added lines green (with the surrounding unchanged context and the hunks stitched together). Close it with ✕, Esc, or a click anywhere outside the panel. A file the skin has no diff for keeps the default host opener.
 
 ## Requirements
 
@@ -55,7 +55,7 @@ The script links this checkout into `$DSH_HOME/profiles/node_modules/@deepseek-a
 ## Usage
 
 - **Apply the skin** — refresh the GUI page (F5 / Ctrl+F5). New installs and updates hot-reload through the running server's patch watch; if nothing changes, restart `dsh web`.
-- **View a change** — after the agent edits or creates files, the turn ends with produced-file chips; click one to open the diff panel on the right, ✕ or Esc to close. Rows are colored red (removed) / green (added).
+- **View a change** — after the agent edits or creates files, the turn ends with produced-file chips; click one to open the diff panel on the right. The panel shows the change as full content: unchanged lines white, removed lines red, added lines green. Close it with ✕, Esc, or a click on any area outside the panel.
 - **Other skins** — while this plugin is active, one skin at a time is expected; disable or remove this plugin's `ui-eva` row to restore your previous theme preference and other skins' chrome.
 
 ## Customizing

@@ -13,27 +13,27 @@ export interface EvaArtifactDiff extends DiffHunk {
   readonly seq: number
 }
 
-/** Latest applied diff per path (last write wins). */
-const diffRegistry = new Map<string, EvaArtifactDiff>()
+/** Latest applied hunks per path; one tool result replaces the earlier set. */
+const diffRegistry = new Map<string, EvaArtifactDiff[]>()
 
 /**
  * @param path - produced file path.
- * @returns the latest applied diff for the path, or undefined when the skin
- * never saw one (the default host opener then keeps working).
+ * @returns the latest applied hunks for the path, or undefined when the skin
+ * never saw any (the default host opener then keeps working).
  */
-export function diffFor(path: string): EvaArtifactDiff | undefined {
+export function diffFor(path: string): readonly EvaArtifactDiff[] | undefined {
   return diffRegistry.get(path)
 }
 
 /** Every currently known applied diff, in insertion order. */
 export function latestDiffs(): readonly EvaArtifactDiff[] {
-  return [...diffRegistry.values()]
+  return [...diffRegistry.values()].flat()
 }
 
-/** Turn-scoped state: the turn number and the diffs seen inside it. */
+/** Turn-scoped state: the turn number and the diff batches seen inside it. */
 interface EvaArtifactsState {
   readonly turn: number
-  readonly seen: ReadonlyMap<string, EvaArtifactDiff>
+  readonly seen: ReadonlyMap<string, readonly EvaArtifactDiff[]>
 }
 
 /**
@@ -77,10 +77,16 @@ export const evaArtifactsDefinition: ConversationNodeDefinition<EvaArtifactsStat
     const diffs = resultDiffs(match.view?.for === 'result' ? match.view.view : null)
     if (diffs === null) return context.state
     const seen = new Map(context.state.seen)
+    const byPath = new Map<string, EvaArtifactDiff[]>()
     for (const diff of diffs) {
       const entry = { ...diff, seq: match.event.seq }
-      seen.set(diff.path, entry)
-      diffRegistry.set(diff.path, entry)
+      const batch = byPath.get(diff.path)
+      if (batch === undefined) byPath.set(diff.path, [entry])
+      else batch.push(entry)
+    }
+    for (const [path, batch] of byPath) {
+      seen.set(path, batch)
+      diffRegistry.set(path, batch)
     }
     return { ...context.state, seen }
   },

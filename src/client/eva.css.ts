@@ -161,8 +161,16 @@ button[class*='brand'] [clip-path*='badge-clip'] path {
   letter-spacing: 2px;
 }
 
-/* ── Codex-style artifact diff panel: right-side EVA plate showing one
-      produced file's applied diff, changes colored by DiffBlock ─────────── */
+/* ── Codex-style artifact panel: right-side EVA plate showing one produced
+      file's change as a full-content view — unchanged lines white, removed
+      lines red, added lines green. A dim backdrop behind the plate closes it
+      on any click outside; the plate itself stays fully interactive. ──────── */
+#dsh-eva-artifacts-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: rgba(10, 4, 7, 0.32);
+}
 #dsh-eva-artifacts {
   position: fixed;
   top: 56px;
@@ -236,6 +244,43 @@ button[class*='brand'] [clip-path*='badge-clip'] path {
   min-height: 0;
   overflow: auto;
   padding: 10px 12px;
+}
+
+/* Full-content diff body: the whole known content renders as white code text
+   (monospace, no soft-wrap so indentation survives), only the removed lines
+   tint red and the added lines green; a dimmed ellipsis marks the stretch a
+   multi-hunk patch omits between changes. */
+#dsh-eva-artifacts .eva-artifacts-lines {
+  font-family: Consolas, 'SF Mono', 'JetBrains Mono', 'Cascadia Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+}
+#dsh-eva-artifacts .eva-line-ctx {
+  color: #f6eff2;
+}
+#dsh-eva-artifacts .eva-line-del {
+  color: #ffb3c0;
+  background: rgba(255, 51, 85, 0.18);
+}
+#dsh-eva-artifacts .eva-line-add {
+  color: #a9f3c6;
+  background: rgba(52, 211, 153, 0.16);
+}
+#dsh-eva-artifacts .eva-line-gap {
+  color: rgba(246, 239, 242, 0.3);
+  letter-spacing: 4px;
+}
+#dsh-eva-artifacts .eva-artifacts-empty {
+  color: rgba(246, 239, 242, 0.4);
+}
+#dsh-eva-artifacts .eva-artifacts-footer {
+  flex: none;
+  padding: 6px 12px 8px;
+  border-top: 1px solid rgba(255, 51, 85, 0.25);
+  color: rgba(246, 239, 242, 0.55);
+  font-family: Consolas, 'SF Mono', 'JetBrains Mono', monospace;
+  font-size: 11px;
 }
 
 /* ── Composer card (the message input capsule): EVA treatment ──────────────

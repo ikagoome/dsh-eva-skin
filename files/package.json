@@ -1,0 +1,21 @@
+{
+  "name": "@deepseek-ai/dsh-eva-files",
+  "description": "Node-side companion of the dsh-eva-skin GUI skin: one localhost HTTP route serving a produced file's current text so the browser diff panel can render full file content (tool-result hunks alone carry only the changed region)",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^"
+  },
+  "files": [
+    "lib/index.js"
+  ]
+}

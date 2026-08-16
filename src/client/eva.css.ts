@@ -221,6 +221,15 @@ button[class*='brand'] [clip-path*='badge-clip'] path {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+#dsh-eva-artifacts .eva-artifacts-badge {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 51, 85, 0.5);
+  border-radius: 3px;
+  color: #ffd500;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
 #dsh-eva-artifacts .eva-artifacts-close {
   flex: none;
   width: 24px;

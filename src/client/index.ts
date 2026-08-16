@@ -137,15 +137,32 @@ export function apply(ctx: ClientContext): void {
   // Clicking a produced-file chip (the deliverables row) opens the right-side
   // diff panel instead of the default host opener. Capture phase stops
   // React's delegated click only when the skin actually holds the diff, so
-  // files without diff data keep the original behavior.
+  // files without diff data keep the original behavior. The panel fetches the
+  // file's current text through the eva-files route (server companion) to
+  // render full content; a missing route or unreadable file falls back to the
+  // hunk view.
   ctx.effect(() => {
+    const loadContent = (path: string): Promise<string | null> => {
+      const state = ctx.sessions.list.getSnapshot()
+      const current = state.current
+      const cwd = current === undefined ? undefined : state.byId[current]?.cwd
+      const query = new URLSearchParams({ path })
+      if (cwd !== undefined) query.set('cwd', cwd)
+      return fetch(`/eva-files/content?${query.toString()}`, { cache: 'no-store' })
+        .then(async (res) => {
+          if (!res.ok) return null
+          const body = await res.json() as { content?: unknown }
+          return typeof body.content === 'string' ? body.content : null
+        })
+        .catch(() => null)
+    }
     const onCaptureClick = (event: Event): void => {
       const target = event.target
       if (!(target instanceof Element)) return
       if (target.closest('[data-produced-files-row]') === null) return
       const chip = target.closest<HTMLElement>('button[title]')
       if (chip === null) return
-      if (!openArtifactsPanel(chip.getAttribute('title') ?? '')) return
+      if (!openArtifactsPanel(chip.getAttribute('title') ?? '', loadContent)) return
       event.preventDefault()
       event.stopPropagation()
     }

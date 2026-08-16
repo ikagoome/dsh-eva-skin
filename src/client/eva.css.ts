@@ -164,12 +164,22 @@ button[class*='brand'] [clip-path*='badge-clip'] path {
 /* ── Codex-style artifact panel: right-side EVA plate showing one produced
       file's change as a full-content view — unchanged lines white, removed
       lines red, added lines green. A dim backdrop behind the plate closes it
-      on any click outside; the plate itself stays fully interactive. ──────── */
+      on any click outside unless the plate is pinned; while the plate is open
+      the app's center column yields its right edge (see the body-class rule
+      below) so the chat is pushed left instead of being overlapped. ──────── */
 #dsh-eva-artifacts-backdrop {
   position: fixed;
   inset: 0;
   z-index: 29;
   background: rgba(10, 4, 7, 0.32);
+}
+
+/* Open-panel layout squeeze: the center column gives up the plate's lane
+   (440px panel + 14px right margin; narrower viewports shrink with the plate)
+   with a short ease so opening and closing glide instead of snapping. */
+body.dsh-eva-panel-open [class*='centerCol'] {
+  margin-right: min(454px, calc(100vw - 26px));
+  transition: margin-right 160ms ease;
 }
 #dsh-eva-artifacts {
   position: fixed;
@@ -247,6 +257,32 @@ button[class*='brand'] [clip-path*='badge-clip'] path {
 }
 #dsh-eva-artifacts .eva-artifacts-close:hover {
   background: rgba(255, 51, 85, 0.22);
+}
+#dsh-eva-artifacts .eva-artifacts-pin {
+  flex: none;
+  padding: 0 8px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 51, 85, 0.5);
+  border-radius: 4px;
+  background: rgba(255, 51, 85, 0.08);
+  color: rgba(246, 239, 242, 0.75);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+#dsh-eva-artifacts .eva-artifacts-pin:hover {
+  background: rgba(255, 51, 85, 0.22);
+}
+#dsh-eva-artifacts .eva-artifacts-pin[aria-pressed='true'] {
+  background: rgba(255, 51, 85, 0.28);
+  border-color: #ffd500;
+  color: #ffd500;
+}
+#dsh-eva-artifacts .eva-artifacts-spacer {
+  flex: 1;
 }
 #dsh-eva-artifacts .eva-artifacts-body {
   flex: 1;

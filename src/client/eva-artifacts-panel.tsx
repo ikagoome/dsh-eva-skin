@@ -5,6 +5,9 @@
  * hunks' shared context), with the stitched hunk view as fallback when the
  * file cannot be read. Mounted by the skin's apply through react-dom; closed
  * by the ✕ button, Escape, or a click anywhere outside the panel (backdrop).
+ * The 固定 (pin) toggle keeps the panel open against backdrop clicks. While a
+ * panel is open the center column yields its right edge (body gets the
+ * `dsh-eva-panel-open` class) so the plate never overlays the chat.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -14,6 +17,40 @@ import type { DiffHunk } from '@deepseek-ai/dsh-client-ui-primitives'
 function basename(path: string): string {
   const at = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
   return at === -1 ? path : path.slice(at + 1)
+}
+
+/** Shared plate header: title, optional badge and full path, pin, and close. */
+interface EvaArtifactsHeadProps {
+  readonly title: string
+  readonly path?: string
+  readonly badge?: string
+  readonly pinned: boolean
+  readonly onTogglePin: () => void
+  readonly onClose: () => void
+}
+
+/** Render the plate header (the 固定 pin sits right before ✕). */
+function EvaArtifactsHead({ title, path, badge, pinned, onTogglePin, onClose }: EvaArtifactsHeadProps) {
+  return (
+    <div className="eva-artifacts-head">
+      <span className="eva-artifacts-title">{title}</span>
+      {badge !== undefined && <span className="eva-artifacts-badge">{badge}</span>}
+      {path !== undefined
+        ? <span className="eva-artifacts-path" title={path}>{path}</span>
+        : <span className="eva-artifacts-spacer" />}
+      <button
+        type="button"
+        className="eva-artifacts-pin"
+        aria-pressed={pinned}
+        aria-label={pinned ? '取消固定' : '固定'}
+        title={pinned ? '已固定：点击面板外不会关闭' : '固定：点击面板外不会关闭'}
+        onClick={onTogglePin}
+      >
+        {pinned ? '已固定' : '固定'}
+      </button>
+      <button type="button" className="eva-artifacts-close" aria-label="close" onClick={onClose}>✕</button>
+    </div>
+  )
 }
 
 /** Panel props: the file to show, the close callback, and the content fetcher. */
@@ -207,6 +244,7 @@ function renderMarked(marked: MarkedContent): ReactNode[] {
 
 /** Render the right-side diff panel for one produced file. */
 export function EvaArtifactsPanel({ path, diffs, onClose, loadContent }: EvaArtifactsPanelProps) {
+  const [pinned, setPinned] = useState(false)
   const [fullText, setFullText] = useState<string | null | undefined>(undefined)
   useEffect(() => {
     if (loadContent === undefined) {
@@ -253,14 +291,20 @@ export function EvaArtifactsPanel({ path, diffs, onClose, loadContent }: EvaArti
     : view.kind === 'hunks' ? view.lines.filter((line) => line.kind === 'del').length : 0
   return (
     <>
-      <div id="dsh-eva-artifacts-backdrop" onClick={onClose} aria-hidden="true" />
+      <div
+        id="dsh-eva-artifacts-backdrop"
+        onClick={pinned ? undefined : onClose}
+        aria-hidden="true"
+      />
       <div id="dsh-eva-artifacts" role="dialog" aria-label={basename(path)}>
-        <div className="eva-artifacts-head">
-          <span className="eva-artifacts-title">{basename(path)}</span>
-          {view.kind === 'full' && <span className="eva-artifacts-badge">全文</span>}
-          <span className="eva-artifacts-path" title={path}>{path}</span>
-          <button type="button" className="eva-artifacts-close" aria-label="close" onClick={onClose}>✕</button>
-        </div>
+        <EvaArtifactsHead
+          title={basename(path)}
+          path={path}
+          badge={view.kind === 'full' ? '全文' : undefined}
+          pinned={pinned}
+          onTogglePin={() => { setPinned(value => !value) }}
+          onClose={onClose}
+        />
         <div className="eva-artifacts-body">
           <div className="eva-artifacts-lines">
             {view.kind === 'full' ? (
@@ -286,12 +330,29 @@ export function EvaArtifactsPanel({ path, diffs, onClose, loadContent }: EvaArti
 let host: HTMLDivElement | null = null
 let root: Root | null = null
 
-/** Close the artifact panel if open. */
+/**
+ * The body class marking an open panel; the stylesheet squeezes the app's
+ * center column right edge under it so the plate never overlays the chat.
+ */
+export const PANEL_OPEN_CLASS = 'dsh-eva-panel-open'
+
+/** Close the artifact panel if open (also releases the layout squeeze). */
 export function closeArtifactsPanel(): void {
   root?.unmount()
   root = null
   host?.remove()
   host = null
+  document.body.classList.remove(PANEL_OPEN_CLASS)
+}
+
+/** Open a panel root: mount the host div and claim the layout squeeze. */
+function mountPanel(element: ReactNode): void {
+  closeArtifactsPanel()
+  host = document.createElement('div')
+  document.body.append(host)
+  document.body.classList.add(PANEL_OPEN_CLASS)
+  root = createRoot(host)
+  root.render(element)
 }
 
 /**
@@ -309,11 +370,7 @@ export function openArtifactsPanel(
   diffs: readonly DiffHunk[] | undefined,
   loadContent?: (path: string) => Promise<string | null>,
 ): boolean {
-  closeArtifactsPanel()
-  host = document.createElement('div')
-  document.body.append(host)
-  root = createRoot(host)
-  root.render(<EvaArtifactsPanel path={path} diffs={diffs ?? []} onClose={closeArtifactsPanel} loadContent={loadContent} />)
+  mountPanel(<EvaArtifactsPanel path={path} diffs={diffs ?? []} onClose={closeArtifactsPanel} loadContent={loadContent} />)
   return true
 }
 
@@ -328,6 +385,7 @@ export interface EvaArtifactsListProps {
 
 /** Render the produced-files picker: one clickable row per produced path. */
 export function EvaArtifactsList({ paths, onClose, onPick }: EvaArtifactsListProps) {
+  const [pinned, setPinned] = useState(false)
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') onClose()
@@ -337,13 +395,19 @@ export function EvaArtifactsList({ paths, onClose, onPick }: EvaArtifactsListPro
   }, [onClose])
   return (
     <>
-      <div id="dsh-eva-artifacts-backdrop" onClick={onClose} aria-hidden="true" />
+      <div
+        id="dsh-eva-artifacts-backdrop"
+        onClick={pinned ? undefined : onClose}
+        aria-hidden="true"
+      />
       <div id="dsh-eva-artifacts" role="dialog" aria-label="produced files">
-        <div className="eva-artifacts-head">
-          <span className="eva-artifacts-title">产物文件</span>
-          <span className="eva-artifacts-badge">{paths.length} 个</span>
-          <button type="button" className="eva-artifacts-close" aria-label="close" onClick={onClose}>✕</button>
-        </div>
+        <EvaArtifactsHead
+          title="产物文件"
+          badge={`${paths.length} 个`}
+          pinned={pinned}
+          onTogglePin={() => { setPinned(value => !value) }}
+          onClose={onClose}
+        />
         <div className="eva-artifacts-body eva-artifacts-list">
           {paths.map((path) => (
             <button
@@ -368,9 +432,5 @@ export function openArtifactsList(
   paths: readonly string[],
   onPick: (path: string) => void,
 ): void {
-  closeArtifactsPanel()
-  host = document.createElement('div')
-  document.body.append(host)
-  root = createRoot(host)
-  root.render(<EvaArtifactsList paths={paths} onClose={closeArtifactsPanel} onPick={onPick} />)
+  mountPanel(<EvaArtifactsList paths={paths} onClose={closeArtifactsPanel} onPick={onPick} />)
 }

@@ -215,7 +215,10 @@ function markFullContent(content: string, diffs: readonly DiffHunk[]): MarkedCon
   return { lines, removals, added, removed }
 }
 
-/** Render the marked full-content view, inserting red blocks before their line. */
+/** Render the marked full-content view, inserting red blocks before their line.
+ * Every file line carries its real 1-based line number; removed lines (not part
+ * of the current file) render with an empty number slot to keep the gutter
+ * aligned. */
 function renderMarked(marked: MarkedContent): ReactNode[] {
   const removalsByAt = new Map<number, string[]>()
   for (const removal of marked.removals) {
@@ -223,20 +226,26 @@ function renderMarked(marked: MarkedContent): ReactNode[] {
     if (existing === undefined) removalsByAt.set(removal.at, [...removal.lines])
     else existing.push(...removal.lines)
   }
+  const row = (key: string, lineNo: string, content: ReactNode): ReactNode => (
+    <div key={key} className="eva-artifacts-row">
+      <span className="eva-artifacts-lineno">{lineNo}</span>
+      {content}
+    </div>
+  )
   const out: ReactNode[] = []
   marked.lines.forEach((line, index) => {
     const red = removalsByAt.get(index)
     if (red !== undefined) {
       red.forEach((text, k) => {
-        out.push(<div key={`del-${index}-${k}`} className="eva-line-del">{text}</div>)
+        out.push(row(`del-${index}-${k}`, '', <div className="eva-line-del">{text}</div>))
       })
     }
-    out.push(<div key={index} className={line.kind === 'add' ? 'eva-line-add' : 'eva-line-ctx'}>{line.text}</div>)
+    out.push(row(String(index), String(index + 1), <div className={line.kind === 'add' ? 'eva-line-add' : 'eva-line-ctx'}>{line.text}</div>))
   })
   const tail = removalsByAt.get(marked.lines.length)
   if (tail !== undefined) {
     tail.forEach((text, k) => {
-      out.push(<div key={`del-tail-${k}`} className="eva-line-del">{text}</div>)
+      out.push(row(`del-tail-${k}`, '', <div className="eva-line-del">{text}</div>))
     })
   }
   return out

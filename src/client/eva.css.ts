@@ -309,6 +309,26 @@ body.dsh-eva-panel-open [class*='centerCol'] {
   line-height: 1.6;
   white-space: pre;
 }
+
+/* Line-number gutter: each file line is a flex row with a right-aligned number
+   slot; removed lines keep the slot empty so the gutter stays aligned. */
+#dsh-eva-artifacts .eva-artifacts-row {
+  display: flex;
+  align-items: flex-start;
+}
+#dsh-eva-artifacts .eva-artifacts-lineno {
+  flex: none;
+  width: 4ch;
+  margin-right: 12px;
+  text-align: right;
+  color: rgba(246, 239, 242, 0.32);
+  user-select: none;
+}
+#dsh-eva-artifacts .eva-artifacts-row > .eva-line-ctx,
+#dsh-eva-artifacts .eva-artifacts-row > .eva-line-add,
+#dsh-eva-artifacts .eva-artifacts-row > .eva-line-del {
+  flex: 1;
+}
 #dsh-eva-artifacts .eva-line-ctx {
   color: #f6eff2;
 }

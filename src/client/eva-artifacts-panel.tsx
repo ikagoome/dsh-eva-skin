@@ -316,3 +316,61 @@ export function openArtifactsPanel(
   root.render(<EvaArtifactsPanel path={path} diffs={diffs ?? []} onClose={closeArtifactsPanel} loadContent={loadContent} />)
   return true
 }
+
+/** Props for the produced-files picker shown by an overflowing row's "+N". */
+export interface EvaArtifactsListProps {
+  /** The turn's full produced path list, in first-seen order. */
+  readonly paths: readonly string[]
+  readonly onClose: () => void
+  /** Called with a picked path; the list then closes itself. */
+  readonly onPick: (path: string) => void
+}
+
+/** Render the produced-files picker: one clickable row per produced path. */
+export function EvaArtifactsList({ paths, onClose, onPick }: EvaArtifactsListProps) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('keydown', onKey) }
+  }, [onClose])
+  return (
+    <>
+      <div id="dsh-eva-artifacts-backdrop" onClick={onClose} aria-hidden="true" />
+      <div id="dsh-eva-artifacts" role="dialog" aria-label="produced files">
+        <div className="eva-artifacts-head">
+          <span className="eva-artifacts-title">产物文件</span>
+          <span className="eva-artifacts-badge">{paths.length} 个</span>
+          <button type="button" className="eva-artifacts-close" aria-label="close" onClick={onClose}>✕</button>
+        </div>
+        <div className="eva-artifacts-body eva-artifacts-list">
+          {paths.map((path) => (
+            <button
+              key={path}
+              type="button"
+              className="eva-artifacts-file"
+              title={path}
+              onClick={() => { onPick(path) }}
+            >
+              <span className="eva-artifacts-file-name">{basename(path)}</span>
+              <span className="eva-artifacts-file-path">{path}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+/** Open the produced-files picker for one turn's full path list. */
+export function openArtifactsList(
+  paths: readonly string[],
+  onPick: (path: string) => void,
+): void {
+  closeArtifactsPanel()
+  host = document.createElement('div')
+  document.body.append(host)
+  root = createRoot(host)
+  root.render(<EvaArtifactsList paths={paths} onClose={closeArtifactsPanel} onPick={onPick} />)
+}

@@ -283,6 +283,41 @@ button[class*='brand'] [clip-path*='badge-clip'] path {
 #dsh-eva-artifacts .eva-artifacts-empty {
   color: rgba(246, 239, 242, 0.4);
 }
+#dsh-eva-artifacts .eva-artifacts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#dsh-eva-artifacts .eva-artifacts-file {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 51, 85, 0.28);
+  border-radius: 4px;
+  background: rgba(255, 51, 85, 0.06);
+  color: #f6eff2;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+#dsh-eva-artifacts .eva-artifacts-file:hover {
+  background: rgba(255, 51, 85, 0.16);
+  border-color: rgba(255, 51, 85, 0.65);
+}
+#dsh-eva-artifacts .eva-artifacts-file-name {
+  flex: none;
+  font-weight: 600;
+}
+#dsh-eva-artifacts .eva-artifacts-file-path {
+  flex: 1;
+  min-width: 0;
+  color: rgba(246, 239, 242, 0.5);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 #dsh-eva-artifacts .eva-artifacts-footer {
   flex: none;
   padding: 6px 12px 8px;

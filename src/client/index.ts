@@ -19,7 +19,7 @@ import type { DiffHunk } from '@deepseek-ai/dsh-client-ui-primitives'
 // Type-only: pulls the theme plugin's Context merge (ctx.theme).
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
 import { evaArtifactsDefinition, diffFor, diffsFromSnapshot, latestDiffs } from './eva-artifacts.ts'
-import { closeArtifactsPanel, openArtifactsPanel } from './eva-artifacts-panel.tsx'
+import { closeArtifactsPanel, openArtifactsList, openArtifactsPanel } from './eva-artifacts-panel.tsx'
 import { buildEvaChrome, createAsukaPlate, createNervPlate } from './eva-chrome.ts'
 import { EVA_CSS } from './eva.css.ts'
 import { EVA_TOKEN_OVERRIDES } from './eva-theme.ts'
@@ -176,10 +176,49 @@ export function apply(ctx: ClientContext): void {
         return undefined
       }
     }
+    // The turn's full produced-path list, from the timeline's per-turn
+    // deliverables data — the same source the produced-files row renders from.
+    const producedPathsForRow = (el: HTMLElement): string[] => {
+      try {
+        const tail = el.closest<HTMLElement>('[data-turn-tail]')
+        if (tail === null) return []
+        const turnNumber = Number(tail.getAttribute('data-turn-tail'))
+        if (!Number.isFinite(turnNumber)) return []
+        const state = ctx.sessions.list.getSnapshot()
+        const current = state.current
+        if (current === undefined) return []
+        const face = ctx.sessions.binding(current)?.session
+        const snapshot = face?.getSnapshot()
+        const turn = snapshot?.chat?.timeline?.turns?.get(turnNumber)
+        if (turn === undefined) return []
+        const data = (turn.data as unknown as { get: (key: string) => unknown }).get('deliverables')
+        const produced = (data as { produced?: unknown } | undefined)?.produced
+        if (!Array.isArray(produced)) return []
+        return produced
+          .map((item) => (item as { path?: unknown }).path)
+          .filter((path): path is string => typeof path === 'string')
+      } catch {
+        return []
+      }
+    }
     const onCaptureClick = (event: Event): void => {
       const target = event.target
       if (!(target instanceof Element)) return
       if (target.closest('[data-produced-files-row]') === null) return
+      // The overflow remainder ("+N 个文件") opens the picker with the whole
+      // turn's produced paths; each row there reopens the artifact panel.
+      const more = target.closest<HTMLElement>('[class*="more"]')
+      if (more !== null) {
+        const paths = producedPathsForRow(more)
+        if (paths.length > 0) {
+          openArtifactsList(paths, (path) => {
+            openArtifactsPanel(path, resolveDiffs(path), loadContent)
+          })
+          event.preventDefault()
+          event.stopPropagation()
+        }
+        return
+      }
       const chip = target.closest<HTMLElement>('button[title]')
       if (chip === null) return
       const path = chip.getAttribute('title') ?? ''

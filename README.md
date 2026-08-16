@@ -4,6 +4,10 @@ Evangelion skin for the [DeepSeek Harness](https://github.com/deepseek-ai/deepse
 
 [中文说明](README.zh.md)
 
+## Preview
+
+![dsh-eva-skin preview](assets/preview.png)
+
 ## Features
 
 - **EVA red-black theme** — token layer applied through the theme registry's `overrideTokens` seat (inline body variables, outrank every stylesheet): translucent dark-red surfaces, EVA red `#ff3355` accents, warm-white text, red borders, amber warnings, EVA-green success. The plugin pins the color scheme to dark so the palette never reads as pastel; unload the plugin to restore the previous preference.

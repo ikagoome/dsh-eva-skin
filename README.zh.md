@@ -4,6 +4,10 @@ DeepSeek Harness Web GUI 的 EVA 皮肤——明日香(EVA-02)红黑主题、壁
 
 [English](README.md)
 
+## 预览
+
+![dsh-eva-skin 预览](assets/preview.png)
+
 ## 功能
 
 - **EVA 红黑主题** — 通过主题注册表 `overrideTokens` 叠加 token 层(以 inline 变量写入 body,优先级高于所有样式表):半透明深红表面、EVA 红 `#ff3355` 强调、暖白文字、红色边框、琥珀警示、EVA 绿成功态。插件会把配色锁定为深色模式(经典红黑,不会发粉);卸载插件即可恢复之前的主题选择。

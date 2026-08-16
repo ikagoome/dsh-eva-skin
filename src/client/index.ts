@@ -15,9 +15,10 @@
  * both palette modes.
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { DiffHunk } from '@deepseek-ai/dsh-client-ui-primitives'
 // Type-only: pulls the theme plugin's Context merge (ctx.theme).
 import type {} from '@deepseek-ai/dsh-client-ui-theme/client'
-import { evaArtifactsDefinition } from './eva-artifacts.ts'
+import { evaArtifactsDefinition, diffFor, diffsFromSnapshot, latestDiffs } from './eva-artifacts.ts'
 import { closeArtifactsPanel, openArtifactsPanel } from './eva-artifacts-panel.tsx'
 import { buildEvaChrome, createAsukaPlate, createNervPlate } from './eva-chrome.ts'
 import { EVA_CSS } from './eva.css.ts'
@@ -33,8 +34,10 @@ const NEW_SESSION_SELECTOR = "button[class*='newSession']"
 export const name = 'ui-eva'
 
 /** Required services: the theme registry (ui-theme) applies the token layer,
-    and the conversation event registry feeds the artifact diff collector. */
-export const inject = ['theme', 'conversationEvents']
+    the conversation event registry feeds the artifact diff collector, and the
+    sessions service (runtime) supplies the session snapshot and cwd for the
+    artifact panel's content fetch. */
+export const inject = ['theme', 'conversationEvents', 'sessions']
 
 /**
  * Client plugin body: pin the dark scheme, stack the EVA token layer, paint
@@ -135,26 +138,43 @@ export function apply(ctx: ClientContext): void {
   }, 'ui-eva: composer tag')
 
   // Clicking a produced-file chip (the deliverables row) opens the right-side
-  // diff panel instead of the default host opener. Capture phase stops
-  // React's delegated click only when the skin actually holds the diff, so
-  // files without diff data keep the original behavior. The panel fetches the
-  // file's current text through the eva-files route (server companion) to
-  // render full content; a missing route or unreadable file falls back to the
-  // hunk view.
+  // diff panel. Every chip opens the panel (never a silent dead click): the
+  // panel fetches the file's current text through the eva-files route for the
+  // full-content view, and diff data comes from the collector registry or the
+  // conversation snapshot (the snapshot covers every rendered chip, even from
+  // turns outside the collector's replayed window).
   ctx.effect(() => {
     const loadContent = (path: string): Promise<string | null> => {
-      const state = ctx.sessions.list.getSnapshot()
-      const current = state.current
-      const cwd = current === undefined ? undefined : state.byId[current]?.cwd
-      const query = new URLSearchParams({ path })
-      if (cwd !== undefined) query.set('cwd', cwd)
-      return fetch(`/eva-files/content?${query.toString()}`, { cache: 'no-store' })
-        .then(async (res) => {
-          if (!res.ok) return null
-          const body = await res.json() as { content?: unknown }
-          return typeof body.content === 'string' ? body.content : null
-        })
-        .catch(() => null)
+      try {
+        const state = ctx.sessions.list.getSnapshot()
+        const current = state.current
+        const cwd = current === undefined ? undefined : state.byId[current]?.cwd
+        const query = new URLSearchParams({ path })
+        if (cwd !== undefined) query.set('cwd', cwd)
+        return fetch(`/eva-files/content?${query.toString()}`, { cache: 'no-store' })
+          .then(async (res) => {
+            if (!res.ok) return null
+            const body = await res.json() as { content?: unknown }
+            return typeof body.content === 'string' ? body.content : null
+          })
+          .catch(() => null)
+      } catch {
+        return Promise.resolve(null)
+      }
+    }
+    const resolveDiffs = (path: string): readonly DiffHunk[] | undefined => {
+      const fromRegistry = diffFor(path)
+      if (fromRegistry !== undefined) return fromRegistry
+      try {
+        const state = ctx.sessions.list.getSnapshot()
+        const current = state.current
+        if (current === undefined) return undefined
+        const face = ctx.sessions.binding(current)?.session
+        if (face === undefined) return undefined
+        return diffsFromSnapshot(face.getSnapshot(), path)
+      } catch {
+        return undefined
+      }
     }
     const onCaptureClick = (event: Event): void => {
       const target = event.target
@@ -162,7 +182,9 @@ export function apply(ctx: ClientContext): void {
       if (target.closest('[data-produced-files-row]') === null) return
       const chip = target.closest<HTMLElement>('button[title]')
       if (chip === null) return
-      if (!openArtifactsPanel(chip.getAttribute('title') ?? '', loadContent)) return
+      const path = chip.getAttribute('title') ?? ''
+      if (path === '') return
+      openArtifactsPanel(path, resolveDiffs(path), loadContent)
       event.preventDefault()
       event.stopPropagation()
     }
@@ -172,4 +194,32 @@ export function apply(ctx: ClientContext): void {
       closeArtifactsPanel()
     }
   }, 'ui-eva: artifact diff panel')
+
+  // Debug aid: expose the panel surface for console probing (window.__evaDebug).
+  Object.assign(window, {
+    __evaDebug: {
+      openArtifactsPanel, closeArtifactsPanel, diffFor, latestDiffs,
+      sessionsState: (): unknown => {
+        try {
+          return { has: !!ctx.sessions, list: !!(ctx.sessions && ctx.sessions.list) }
+        } catch (error) {
+          return { threw: String(error) }
+        }
+      },
+      probeFetch: async (path: string): Promise<unknown> => {
+        try {
+          const state = ctx.sessions.list.getSnapshot()
+          const current = state.current
+          const cwd = current === undefined ? undefined : state.byId[current]?.cwd
+          const query = new URLSearchParams({ path })
+          if (cwd !== undefined) query.set('cwd', cwd)
+          const url = `/eva-files/content?${query.toString()}`
+          const res = await fetch(url, { cache: 'no-store' })
+          return { status: res.status, url, current }
+        } catch (error) {
+          return { threw: String(error) }
+        }
+      },
+    },
+  })
 }

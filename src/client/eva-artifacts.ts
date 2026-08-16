@@ -76,7 +76,10 @@ export const evaArtifactsDefinition: ConversationNodeDefinition<EvaArtifactsStat
     if (match.event.type !== 'tool/result') return context.state
     const diffs = resultDiffs(match.view?.for === 'result' ? match.view.view : null)
     if (diffs === null) return context.state
-    const seen = new Map(context.state.seen)
+    // A window that starts mid-turn has no turn/start, so state may be absent;
+    // the registry mirror still applies (it is per path, not per turn).
+    const prior = context.state
+    const seen = new Map(prior === undefined ? [] : prior.seen)
     const byPath = new Map<string, EvaArtifactDiff[]>()
     for (const diff of diffs) {
       const entry = { ...diff, seq: match.event.seq }
@@ -88,6 +91,42 @@ export const evaArtifactsDefinition: ConversationNodeDefinition<EvaArtifactsStat
       seen.set(path, batch)
       diffRegistry.set(path, batch)
     }
-    return { ...context.state, seen }
+    return prior === undefined ? context.state : { ...prior, seen }
   },
+}
+
+/**
+ * Narrow one conversation snapshot's tool-result nodes to the latest diff-card
+ * hunks for a produced path. The snapshot covers every node the chat renders,
+ * so this finds a chip's change no matter which turn it came from — the
+ * collector registry only sees events replayed into the current window.
+ * @param snapshot - the session's conversation snapshot, structurally.
+ * @param path - produced file path.
+ * @returns the latest hunks for the path, or undefined when none are rendered.
+ */
+export function diffsFromSnapshot(
+  snapshot: { legacy?: { nodes?: readonly unknown[] } } | null | undefined,
+  path: string,
+): readonly DiffHunk[] | undefined {
+  const nodes = snapshot?.legacy?.nodes
+  if (!Array.isArray(nodes)) return undefined
+  let best: DiffHunk[] | undefined
+  for (const node of nodes) {
+    if (typeof node !== 'object' || node === null) continue
+    const record = node as Record<string, unknown>
+    if (record.kind !== 'tool-result') continue
+    const view = record.resultView as { card?: unknown; diffs?: unknown } | null | undefined
+    if (view === null || view === undefined || view.card !== 'diff' || !Array.isArray(view.diffs)) continue
+    const hunks: DiffHunk[] = []
+    for (const hunk of view.diffs) {
+      if (typeof hunk !== 'object' || hunk === null) continue
+      const { path: hunkPath, oldText, newText } = hunk as Record<string, unknown>
+      if (hunkPath !== path) continue
+      if (typeof newText !== 'string') continue
+      if (oldText !== null && typeof oldText !== 'string') continue
+      hunks.push({ path, oldText, newText })
+    }
+    if (hunks.length > 0) best = hunks
+  }
+  return best
 }

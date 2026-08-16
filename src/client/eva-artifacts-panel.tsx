@@ -9,7 +9,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { DiffHunk } from '@deepseek-ai/dsh-client-ui-primitives'
-import { diffFor } from './eva-artifacts.ts'
 
 /** Trailing path segment shown as the panel title. */
 function basename(path: string): string {
@@ -216,10 +215,19 @@ export function EvaArtifactsPanel({ path, diffs, onClose, loadContent }: EvaArti
     }
     let cancelled = false
     setFullText(undefined)
-    void loadContent(path).then(
-      (text) => { if (!cancelled) setFullText(text) },
-      () => { if (!cancelled) setFullText(null) },
-    )
+    const run = (): void => {
+      Promise.resolve()
+        .then(() => loadContent(path))
+        .then(
+          (text) => { if (!cancelled) setFullText(text) },
+          () => { if (!cancelled) setFullText(null) },
+        )
+    }
+    try {
+      run()
+    } catch {
+      if (!cancelled) setFullText(null)
+    }
     return () => { cancelled = true }
   }, [path, loadContent])
   useEffect(() => {
@@ -234,14 +242,15 @@ export function EvaArtifactsPanel({ path, diffs, onClose, loadContent }: EvaArti
       const marked = markFullContent(fullText, diffs)
       return { kind: 'full' as const, marked }
     }
+    if (fullText === null && diffs.length === 0) return { kind: 'error' as const }
     return { kind: 'hunks' as const, lines: stitchLines(diffs) }
   }, [fullText, diffs])
   const added = view.kind === 'full'
     ? view.marked.added
-    : view.lines.filter((line) => line.kind === 'add').length
+    : view.kind === 'hunks' ? view.lines.filter((line) => line.kind === 'add').length : 0
   const removed = view.kind === 'full'
     ? view.marked.removed
-    : view.lines.filter((line) => line.kind === 'del').length
+    : view.kind === 'hunks' ? view.lines.filter((line) => line.kind === 'del').length : 0
   return (
     <>
       <div id="dsh-eva-artifacts-backdrop" onClick={onClose} aria-hidden="true" />
@@ -256,6 +265,8 @@ export function EvaArtifactsPanel({ path, diffs, onClose, loadContent }: EvaArti
           <div className="eva-artifacts-lines">
             {view.kind === 'full' ? (
               renderMarked(view.marked)
+            ) : view.kind === 'error' ? (
+              <div className="eva-line-ctx eva-artifacts-empty">无法读取文件内容（文件可能已被删除、过大或为二进制）</div>
             ) : view.lines.length === 0 ? (
               <div className="eva-line-ctx eva-artifacts-empty">（空文件）</div>
             ) : (
@@ -265,7 +276,7 @@ export function EvaArtifactsPanel({ path, diffs, onClose, loadContent }: EvaArti
             )}
           </div>
         </div>
-        <div className="eva-artifacts-footer">└ +{added} -{removed}</div>
+        {view.kind !== 'error' && <div className="eva-artifacts-footer">└ +{added} -{removed}</div>}
       </div>
     </>
   )
@@ -284,22 +295,24 @@ export function closeArtifactsPanel(): void {
 }
 
 /**
- * Open the artifact panel for one produced path; a no-op when the skin holds
- * no diff for it (the default host open keeps working in that case).
+ * Open the artifact panel for one produced path. Always opens (returns true):
+ * the panel fetches the file's current text for the full-content view and
+ * colors the change when `diffs` are provided; without content and without
+ * diffs it shows a read-failure state instead of a silent dead click.
  * @param path - produced file path.
+ * @param diffs - the file's hunks, when known (may be empty).
  * @param loadContent - optional fetcher for the file's current text.
  * @returns whether the panel opened.
  */
 export function openArtifactsPanel(
   path: string,
+  diffs: readonly DiffHunk[] | undefined,
   loadContent?: (path: string) => Promise<string | null>,
 ): boolean {
-  const diff = diffFor(path)
-  if (diff === undefined) return false
   closeArtifactsPanel()
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
-  root.render(<EvaArtifactsPanel path={path} diffs={diff} onClose={closeArtifactsPanel} loadContent={loadContent} />)
+  root.render(<EvaArtifactsPanel path={path} diffs={diffs ?? []} onClose={closeArtifactsPanel} loadContent={loadContent} />)
   return true
 }
